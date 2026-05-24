@@ -8,7 +8,25 @@ from django.http import JsonResponse
 
 def health_check(request):
     """Simple health check endpoint — returns 200 if server is running."""
-    return JsonResponse({"status": "ok", "service": "GrantBridge API"})
+    from django.db import connection
+    db_status = "unknown"
+    db_error = ""
+    try:
+        connection.ensure_connection()
+        db_status = "connected"
+    except Exception as e:
+        db_status = "error"
+        db_error = str(e)
+
+    import os
+    return JsonResponse({
+        "status": "ok",
+        "service": "GrantBridge API",
+        "database": db_status,
+        "db_error": db_error,
+        "database_url_set": bool(os.environ.get("DATABASE_URL")),
+        "settings": os.environ.get("DJANGO_SETTINGS_MODULE", "unknown"),
+    })
 
 
 urlpatterns = [

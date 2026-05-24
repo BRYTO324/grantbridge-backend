@@ -21,7 +21,7 @@ services:
       - key: ALLOWED_HOSTS
         value: ".onrender.com,grantbridge-backend-2.onrender.com"
       - key: CORS_ALLOWED_ORIGINS
-        value: "https://grantbridge.vercel.app,https://grantbridge-frontend.vercel.app"
+        value: "https://grantbridge-frontend.vercel.app"
       - key: FRONTEND_URL
         value: "https://grantbridge-frontend.vercel.app"
       - key: PAYSTACK_SECRET_KEY

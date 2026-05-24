@@ -17,8 +17,11 @@ fi
 echo "==> Clearing old static files..."
 rm -rf staticfiles/
 
-echo "==> Collecting static files..."
-python manage.py collectstatic --noinput --clear
+echo "==> Collecting static files (admin + DRF + app)..."
+python manage.py collectstatic --noinput --clear -v 0
+
+echo "==> Verifying static files collected..."
+ls staticfiles/ | head -10
 
 echo "==> Running migrations..."
 python manage.py migrate --noinput

@@ -41,8 +41,9 @@ else:
 # ─── Static files ─────────────────────────────────────────────────────────────
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
-# CompressedStaticFilesStorage — no manifest, works reliably on Render
 STATICFILES_STORAGE = "whitenoise.storage.CompressedStaticFilesStorage"
+WHITENOISE_USE_FINDERS = False  # Use collected files in production
+WHITENOISE_AUTOREFRESH = False
 
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"

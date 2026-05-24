@@ -1,15 +1,23 @@
 #!/usr/bin/env bash
-# Render build script — runs before the web service starts
+# Render build script
 set -o errexit
 
+echo "==> Python version: $(python --version)"
 echo "==> Installing dependencies..."
 pip install -r requirements.txt
+
+echo "==> Checking DATABASE_URL..."
+if [ -z "$DATABASE_URL" ]; then
+  echo "WARNING: DATABASE_URL is not set! Using SQLite fallback."
+else
+  echo "DATABASE_URL is set (postgres)"
+fi
 
 echo "==> Collecting static files..."
 python manage.py collectstatic --noinput
 
 echo "==> Running migrations..."
-python manage.py migrate
+python manage.py migrate --noinput
 
 echo "==> Creating superuser (if not exists)..."
 python manage.py shell -c "

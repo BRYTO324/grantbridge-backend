@@ -84,6 +84,7 @@ WSGI_APPLICATION = "config.wsgi.application"
 
 # Database — supports both sqlite:/// (dev) and postgres:// (prod/Neon)
 import dj_database_url as _dj_db_url
+import os as _os
 
 _db_url = env("DATABASE_URL", default="sqlite:///db.sqlite3")
 DATABASES = {

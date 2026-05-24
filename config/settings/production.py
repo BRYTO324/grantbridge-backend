@@ -4,30 +4,38 @@ All secrets come from environment variables; nothing is hardcoded.
 """
 from .base import *  # noqa
 import dj_database_url
+import os
 
 DEBUG = False
 
 # ─── Hosts ────────────────────────────────────────────────────────────────────
-# Render sets RENDER_EXTERNAL_HOSTNAME automatically.
-# Also allow any .onrender.com subdomain and your custom domain.
-import os
 RENDER_HOSTNAME = os.environ.get("RENDER_EXTERNAL_HOSTNAME", "")
-ALLOWED_HOSTS = env.list(
-    "ALLOWED_HOSTS",
-    default=["localhost", "127.0.0.1"],
-)
-if RENDER_HOSTNAME:
-    ALLOWED_HOSTS.append(RENDER_HOSTNAME)
+_allowed = env.list("ALLOWED_HOSTS", default=["localhost", "127.0.0.1"])
+if RENDER_HOSTNAME and RENDER_HOSTNAME not in _allowed:
+    _allowed.append(RENDER_HOSTNAME)
+# Always allow the known Render hostname
+_allowed.append("grantbridge-backend-2.onrender.com")
+ALLOWED_HOSTS = list(set(_allowed))
 
-# ─── Database (Neon / Postgres via DATABASE_URL) ──────────────────────────────
-DATABASES = {
-    "default": dj_database_url.config(
-        default=env("DATABASE_URL"),
-        conn_max_age=600,
-        conn_health_checks=True,
-        ssl_require=True,
-    )
-}
+# ─── Database ─────────────────────────────────────────────────────────────────
+_db_url = os.environ.get("DATABASE_URL", "")
+if _db_url:
+    DATABASES = {
+        "default": dj_database_url.config(
+            default=_db_url,
+            conn_max_age=600,
+            conn_health_checks=True,
+            ssl_require=_db_url.startswith("postgres"),
+        )
+    }
+else:
+    # Fallback to SQLite if DATABASE_URL not set (should not happen in prod)
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": BASE_DIR / "db.sqlite3",
+        }
+    }
 
 # ─── Static & Media ───────────────────────────────────────────────────────────
 STATIC_URL = "/static/"

@@ -33,45 +33,61 @@ def get_tokens_for_user(user):
 
 
 def send_verification_email(user, request=None):
-    """Send email verification link to the user."""
-    token = user.email_verification_token
-    frontend_url = settings.FRONTEND_URL
-    verify_url = f"{frontend_url}/verify-email/{user.role}?token={token}"
+    """Send email verification link to the user — runs in background thread."""
+    import threading
 
-    send_mail(
-        subject="Verify your GrantBridge email",
-        message=(
-            f"Hi {user.full_name},\n\n"
-            f"Please verify your email by clicking the link below:\n\n"
-            f"{verify_url}\n\n"
-            f"This link expires in 24 hours.\n\n"
-            f"— The GrantBridge Team"
-        ),
-        from_email=settings.DEFAULT_FROM_EMAIL,
-        recipient_list=[user.email],
-        fail_silently=False,
-    )
+    def _send():
+        try:
+            token = user.email_verification_token
+            frontend_url = settings.FRONTEND_URL
+            verify_url = f"{frontend_url}/verify-email/{user.role}?token={token}"
+            send_mail(
+                subject="Verify your GrantBridge email",
+                message=(
+                    f"Hi {user.full_name},\n\n"
+                    f"Please verify your email by clicking the link below:\n\n"
+                    f"{verify_url}\n\n"
+                    f"This link expires in 24 hours.\n\n"
+                    f"— The GrantBridge Team"
+                ),
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[user.email],
+                fail_silently=True,
+            )
+        except Exception:
+            pass  # Never block registration due to email failure
+
+    thread = threading.Thread(target=_send, daemon=True)
+    thread.start()
 
 
 def send_password_reset_email(user):
-    """Send password reset link to the user."""
-    token = user.password_reset_token
-    frontend_url = settings.FRONTEND_URL
-    reset_url = f"{frontend_url}/reset-password/{user.role}?token={token}"
+    """Send password reset link to the user — runs in background thread."""
+    import threading
 
-    send_mail(
-        subject="Reset your GrantBridge password",
-        message=(
-            f"Hi {user.full_name},\n\n"
-            f"Click the link below to reset your password:\n\n"
-            f"{reset_url}\n\n"
-            f"This link expires in 1 hour. If you didn't request this, ignore this email.\n\n"
-            f"— The GrantBridge Team"
-        ),
-        from_email=settings.DEFAULT_FROM_EMAIL,
-        recipient_list=[user.email],
-        fail_silently=False,
-    )
+    def _send():
+        try:
+            token = user.password_reset_token
+            frontend_url = settings.FRONTEND_URL
+            reset_url = f"{frontend_url}/reset-password/{user.role}?token={token}"
+            send_mail(
+                subject="Reset your GrantBridge password",
+                message=(
+                    f"Hi {user.full_name},\n\n"
+                    f"Click the link below to reset your password:\n\n"
+                    f"{reset_url}\n\n"
+                    f"This link expires in 1 hour. If you didn't request this, ignore this email.\n\n"
+                    f"— The GrantBridge Team"
+                ),
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[user.email],
+                fail_silently=True,
+            )
+        except Exception:
+            pass
+
+    thread = threading.Thread(target=_send, daemon=True)
+    thread.start()
 
 
 class RegisterView(APIView):
@@ -86,7 +102,7 @@ class RegisterView(APIView):
         try:
             send_verification_email(user, request)
         except Exception:
-            pass  # Don't fail registration if email fails
+            pass  # Don't fail registration if email fails — user can resend
 
         tokens = get_tokens_for_user(user)
         user_data = UserSerializer(user, context={"request": request}).data

@@ -37,11 +37,11 @@ services:
       - key: EMAIL_USE_TLS
         value: "True"
       - key: EMAIL_HOST_USER
-        value: "grantbrigdehq@gmail.com"
+        value: "suzywizzy6@gmail.com"
       - key: EMAIL_HOST_PASSWORD
         value: "tvxi eesy zhny tcqj"
       - key: DEFAULT_FROM_EMAIL
-        value: "GrantBridge <grantbrigdehq@gmail.com>"
+        value: "GrantBridge <suzywizzy6@gmail.com>"
       - key: ADMIN_EMAIL
         value: "grantbrigdehq@gmail.com"
       - key: ADMIN_PASSWORD

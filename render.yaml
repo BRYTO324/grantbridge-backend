@@ -4,7 +4,7 @@ services:
     runtime: python
     pythonVersion: "3.11.9"
     buildCommand: chmod +x build.sh && ./build.sh
-    startCommand: gunicorn config.wsgi:application --bind 0.0.0.0:$PORT --workers 2 --timeout 120 --log-level info
+    startCommand: gunicorn config.wsgi:application --bind 0.0.0.0:$PORT --workers 2 --timeout 120 --log-level info --preload
     envVars:
       - key: PYTHON_VERSION
         value: "3.11.9"

@@ -100,12 +100,13 @@ class UpdateProfileSerializer(serializers.ModelSerializer):
         ]
 
     def update(self, instance, validated_data):
-        # If no data provided, just return the current instance (used for refresh)
         if not validated_data:
             return instance
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
-        instance.save()
+        # Save only the fields that were actually updated
+        update_fields = list(validated_data.keys())
+        instance.save(update_fields=update_fields)
         return instance
 
 

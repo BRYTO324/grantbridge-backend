@@ -250,7 +250,7 @@ class ResetPasswordView(APIView):
 class MeView(APIView):
     """GET/PATCH /api/v1/auth/me/"""
     permission_classes = [IsAuthenticated]
-    # No explicit parser_classes — use global CamelCaseJSONParser + MultiPartParser
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
 
     def get(self, request):
         serializer = UserSerializer(request.user, context={"request": request})

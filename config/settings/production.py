@@ -14,7 +14,7 @@ ALLOWED_HOSTS = ["localhost", "127.0.0.1", ".onrender.com", "grantbridge-backend
 if RENDER_HOSTNAME and RENDER_HOSTNAME not in ALLOWED_HOSTS:
     ALLOWED_HOSTS.append(RENDER_HOSTNAME)
 
-# ─── Database ─────────────────────────────────────────────────────────────────
+# ─── Database (PostgreSQL via Render) ─────────────────────────────────────────
 _db_url = os.environ.get("DATABASE_URL", "")
 if _db_url:
     DATABASES = {
@@ -37,21 +37,21 @@ STATICFILES_STORAGE = "whitenoise.storage.CompressedStaticFilesStorage"
 WHITENOISE_USE_FINDERS = False
 WHITENOISE_AUTOREFRESH = False
 
-# ─── Media files ──────────────────────────────────────────────────────────────
-# Cloudinary for persistent media storage (avatars, ID docs, pitch images)
+# ─── Media files (Cloudinary for persistent storage) ─────────────────────────
 _cloudinary_url = os.environ.get("CLOUDINARY_URL", "")
 if _cloudinary_url:
-    INSTALLED_APPS = INSTALLED_APPS + ["cloudinary_storage", "cloudinary"]  # type: ignore[name-defined]
+    import cloudinary
+    cloudinary.config(cloudinary_url=_cloudinary_url)
+    INSTALLED_APPS = INSTALLED_APPS + ["cloudinary_storage", "cloudinary"]  # type: ignore
     DEFAULT_FILE_STORAGE = "cloudinary_storage.storage.MediaCloudinaryStorage"
     MEDIA_URL = "/media/"
 else:
-    # Fallback: local disk (ephemeral on Render — add CLOUDINARY_URL for persistence)
     MEDIA_URL = "/media/"
     MEDIA_ROOT = BASE_DIR / "media"
 
-# ─── REST Framework — JSON only in production (no browsable API) ──────────────
+# ─── REST Framework — JSON only, no browsable API ────────────────────────────
 REST_FRAMEWORK = {
-    **REST_FRAMEWORK,  # type: ignore[name-defined]
+    **REST_FRAMEWORK,  # type: ignore
     "DEFAULT_RENDERER_CLASSES": (
         "djangorestframework_camel_case.render.CamelCaseJSONRenderer",
     ),
@@ -75,14 +75,29 @@ _cors = os.environ.get("CORS_ALLOWED_ORIGINS", "https://grantbridge-frontend.ver
 CORS_ALLOWED_ORIGINS = [o.strip() for o in _cors.split(",") if o.strip()]
 CORS_ALLOW_CREDENTIALS = True
 
-# ─── Email ────────────────────────────────────────────────────────────────────
-EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
-EMAIL_HOST = os.environ.get("EMAIL_HOST", "smtp.gmail.com")
-EMAIL_PORT = int(os.environ.get("EMAIL_PORT", "587"))
-EMAIL_USE_TLS = True
-EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "")
-EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "")
-DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "GrantBridge <suzywizzy6@gmail.com>")
+# ─── Email — SendGrid via django-anymail (free 100/day) ──────────────────────
+_sendgrid_key = os.environ.get("SENDGRID_API_KEY", "")
+
+if _sendgrid_key:
+    INSTALLED_APPS = INSTALLED_APPS + ["anymail"]  # type: ignore
+    EMAIL_BACKEND = "anymail.backends.sendgrid.EmailBackend"
+    ANYMAIL = {
+        "SENDGRID_API_KEY": _sendgrid_key,
+    }
+    DEFAULT_FROM_EMAIL = os.environ.get(
+        "DEFAULT_FROM_EMAIL", "GrantBridge <noreply@grantbridge.com>"
+    )
+else:
+    # Fallback: Gmail SMTP
+    EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+    EMAIL_HOST = os.environ.get("EMAIL_HOST", "smtp.gmail.com")
+    EMAIL_PORT = int(os.environ.get("EMAIL_PORT", "587"))
+    EMAIL_USE_TLS = True
+    EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "")
+    EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "")
+    DEFAULT_FROM_EMAIL = os.environ.get(
+        "DEFAULT_FROM_EMAIL", "GrantBridge <grantbrigdehq@gmail.com>"
+    )
 
 # ─── Logging ──────────────────────────────────────────────────────────────────
 LOGGING = {
@@ -98,5 +113,6 @@ LOGGING = {
     "loggers": {
         "django": {"handlers": ["console"], "level": "INFO", "propagate": False},
         "apps": {"handlers": ["console"], "level": "INFO", "propagate": False},
+        "anymail": {"handlers": ["console"], "level": "INFO", "propagate": False},
     },
 }

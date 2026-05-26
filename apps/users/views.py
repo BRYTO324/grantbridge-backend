@@ -1,10 +1,8 @@
 """Auth and user profile views."""
 import secrets
 from django.conf import settings
-from django.core.mail import send_mail
 from django.utils import timezone
 from rest_framework import status
-from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -98,10 +96,16 @@ class RegisterView(APIView):
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
 
+        # Auto-verify email so users can use the app immediately
+        # Email verification link is still sent in background
+        user.email_verified = True
+        user.save(update_fields=["email_verified"])
+
+        # Send verification email in background (non-blocking)
         try:
             send_verification_email(user, request)
         except Exception:
-            pass  # Don't fail registration if email fails — user can resend
+            pass
 
         tokens = get_tokens_for_user(user)
         user_data = UserSerializer(user, context={"request": request}).data
@@ -111,7 +115,7 @@ class RegisterView(APIView):
                 "user": user_data,
                 "access": tokens["access"],
                 "refresh": tokens["refresh"],
-                "message": "Account created. Please verify your email.",
+                "message": "Account created successfully.",
             },
             status=status.HTTP_201_CREATED,
         )
@@ -250,7 +254,8 @@ class ResetPasswordView(APIView):
 class MeView(APIView):
     """GET/PATCH /api/v1/auth/me/"""
     permission_classes = [IsAuthenticated]
-    parser_classes = [MultiPartParser, FormParser, JSONParser]
+    # NO explicit parser_classes — uses global CamelCaseJSONParser + MultiPartParser
+    # This is critical: explicit parsers override the global camelCase parser
 
     def get(self, request):
         serializer = UserSerializer(request.user, context={"request": request})

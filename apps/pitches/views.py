@@ -1,9 +1,7 @@
 """Pitch views — CRUD + like/bookmark toggles."""
 from django.db import models as db_models
-from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework import status, filters
-from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
-from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly, AllowAny
+from rest_framework import status
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 

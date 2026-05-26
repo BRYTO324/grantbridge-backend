@@ -1,17 +1,17 @@
 """Development settings."""
 from .base import *  # noqa
+import os
 
 DEBUG = True
 
-# Use SQLite for quick local dev if no DATABASE_URL is set
-# Override in .env with DATABASE_URL=postgres://... for Postgres
-
-# Email backend is read from .env — set EMAIL_BACKEND there.
-# Use smtp.EmailBackend + Gmail App Password to send real emails.
-# Use console.EmailBackend to print emails to terminal instead.
+# Use SendGrid for real email delivery
+_sendgrid_key = os.environ.get("SENDGRID_API_KEY", "")
+if _sendgrid_key:
+    INSTALLED_APPS += ["anymail"]
+    EMAIL_BACKEND = "anymail.backends.sendgrid.EmailBackend"
+    ANYMAIL = {"SENDGRID_API_KEY": _sendgrid_key}
+else:
+    EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 
 # Relax CORS in dev
 CORS_ALLOW_ALL_ORIGINS = True
-
-# Django Debug Toolbar (optional — install separately)
-# INSTALLED_APPS += ["debug_toolbar"]

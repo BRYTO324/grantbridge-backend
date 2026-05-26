@@ -2,7 +2,6 @@ services:
   - type: web
     name: grantbridge-backend
     runtime: python
-    pythonVersion: "3.11.9"
     buildCommand: chmod +x build.sh && ./build.sh
     startCommand: gunicorn config.wsgi:application --bind 0.0.0.0:$PORT --workers 2 --timeout 120 --log-level info --preload
     envVars:
@@ -28,20 +27,10 @@ services:
         value: "sk_test_d6952f8816fc458dc306386319da82bca4e20f6a"
       - key: PAYSTACK_PUBLIC_KEY
         value: "pk_test_36637e4b0b7603e563d59c3f4cbd436e9a092079"
-      - key: EMAIL_BACKEND
-        value: django.core.mail.backends.smtp.EmailBackend
-      - key: EMAIL_HOST
-        value: smtp.gmail.com
-      - key: EMAIL_PORT
-        value: "587"
-      - key: EMAIL_USE_TLS
-        value: "True"
-      - key: EMAIL_HOST_USER
-        value: "suzywizzy6@gmail.com"
-      - key: EMAIL_HOST_PASSWORD
-        value: "tvxi eesy zhny tcqj"
+      - key: SENDGRID_API_KEY
+        sync: false
       - key: DEFAULT_FROM_EMAIL
-        value: "GrantBridge <suzywizzy6@gmail.com>"
+        value: "GrantBridge <grantbrigdehq@gmail.com>"
       - key: ADMIN_EMAIL
         value: "grantbrigdehq@gmail.com"
       - key: ADMIN_PASSWORD

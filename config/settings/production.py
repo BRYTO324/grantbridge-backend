@@ -75,29 +75,25 @@ _cors = os.environ.get("CORS_ALLOWED_ORIGINS", "https://grantbridge-frontend.ver
 CORS_ALLOWED_ORIGINS = [o.strip() for o in _cors.split(",") if o.strip()]
 CORS_ALLOW_CREDENTIALS = True
 
-# ─── Email — SendGrid via django-anymail (free 100/day) ──────────────────────
+# ─── Email — Gmail SMTP port 465 SSL (confirmed working) ─────────────────────
 _sendgrid_key = os.environ.get("SENDGRID_API_KEY", "")
 
 if _sendgrid_key:
+    # Use SendGrid if key is available and sender is verified
     INSTALLED_APPS = INSTALLED_APPS + ["anymail"]  # type: ignore
     EMAIL_BACKEND = "anymail.backends.sendgrid.EmailBackend"
-    ANYMAIL = {
-        "SENDGRID_API_KEY": _sendgrid_key,
-    }
-    DEFAULT_FROM_EMAIL = os.environ.get(
-        "DEFAULT_FROM_EMAIL", "GrantBridge <noreply@grantbridge.com>"
-    )
+    ANYMAIL = {"SENDGRID_API_KEY": _sendgrid_key}
+    DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "GrantBridge <suzywizzy6@gmail.com>")
 else:
-    # Fallback: Gmail SMTP
+    # Gmail SMTP port 465 SSL — works on Render
     EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
-    EMAIL_HOST = os.environ.get("EMAIL_HOST", "smtp.gmail.com")
-    EMAIL_PORT = int(os.environ.get("EMAIL_PORT", "587"))
-    EMAIL_USE_TLS = True
+    EMAIL_HOST = "smtp.gmail.com"
+    EMAIL_PORT = 465
+    EMAIL_USE_SSL = True
+    EMAIL_USE_TLS = False
     EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "")
     EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "")
-    DEFAULT_FROM_EMAIL = os.environ.get(
-        "DEFAULT_FROM_EMAIL", "GrantBridge <grantbrigdehq@gmail.com>"
-    )
+    DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "GrantBridge <suzywizzy6@gmail.com>")
 
 # ─── Logging ──────────────────────────────────────────────────────────────────
 LOGGING = {

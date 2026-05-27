@@ -50,6 +50,10 @@ def initialize_transaction(email: str, amount_kobo: int, reference: str, metadat
     Returns { authorization_url, access_code, reference } on success.
     Raises ValueError on failure.
     """
+    secret_key = settings.PAYSTACK_SECRET_KEY
+    if not secret_key or secret_key.startswith("sk_test_your") or "[" in secret_key:
+        raise ValueError("Paystack secret key is not configured. Please contact support.")
+
     payload = {
         "email": email,
         "amount": amount_kobo,
@@ -58,17 +62,22 @@ def initialize_transaction(email: str, amount_kobo: int, reference: str, metadat
         "callback_url": f"{settings.FRONTEND_URL}/dashboard/funder/payment/callback",
     }
 
-    response = requests.post(
-        f"{PAYSTACK_BASE_URL}/transaction/initialize",
-        json=payload,
-        headers=get_headers(),
-        timeout=30,
-    )
+    try:
+        response = requests.post(
+            f"{PAYSTACK_BASE_URL}/transaction/initialize",
+            json=payload,
+            headers=get_headers(),
+            timeout=15,
+        )
+    except requests.Timeout:
+        raise ValueError("Payment service timed out. Please try again.")
+    except requests.RequestException as e:
+        raise ValueError(f"Payment service unavailable: {str(e)}")
 
     data = response.json()
 
     if not data.get("status"):
-        raise ValueError(data.get("message", "Paystack initialization failed."))
+        raise ValueError(data.get("message", "Payment initialization failed. Please try again."))
 
     return data["data"]
 

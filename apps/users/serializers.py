@@ -19,6 +19,7 @@ class UserSerializer(serializers.ModelSerializer):
             "id", "email", "full_name", "role", "company", "phone",
             "avatar_url", "verification_status", "profile_completed",
             "email_verified", "date_joined", "location", "website", "bio",
+            "bank_name", "bank_account_number", "bank_account_name",
         ]
         read_only_fields = ["id", "email", "role", "date_joined", "email_verified"]
 
@@ -89,7 +90,6 @@ class LoginSerializer(serializers.Serializer):
 
 class UpdateProfileSerializer(serializers.ModelSerializer):
     """PATCH /auth/me/ — update profile fields."""
-    # CharField so any string is accepted — frontend validates URL format
     website = serializers.CharField(max_length=500, allow_blank=True, required=False)
 
     class Meta:
@@ -97,6 +97,7 @@ class UpdateProfileSerializer(serializers.ModelSerializer):
         fields = [
             "full_name", "company", "phone", "avatar",
             "profile_completed", "location", "website", "bio",
+            "bank_name", "bank_account_number", "bank_account_name",
         ]
 
     def update(self, instance, validated_data):
@@ -104,7 +105,6 @@ class UpdateProfileSerializer(serializers.ModelSerializer):
             return instance
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
-        # Save only the fields that were actually updated
         update_fields = list(validated_data.keys())
         instance.save(update_fields=update_fields)
         return instance

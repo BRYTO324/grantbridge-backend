@@ -27,6 +27,8 @@ services:
         value: "sk_test_d6952f8816fc458dc306386319da82bca4e20f6a"
       - key: PAYSTACK_PUBLIC_KEY
         value: "pk_test_36637e4b0b7603e563d59c3f4cbd436e9a092079"
+      - key: CLOUDINARY_URL
+        value: "cloudinary://959944263569935:-MlNvh0O_u3m2PwrpZD3AJ_tYEs@dfdswk0l7"
       - key: EMAIL_HOST_USER
         value: "suzywizzy6@gmail.com"
       - key: EMAIL_HOST_PASSWORD
@@ -34,7 +36,7 @@ services:
       - key: DEFAULT_FROM_EMAIL
         value: "GrantBridge <suzywizzy6@gmail.com>"
       - key: ADMIN_EMAIL
-        value: "grantbrigdehq@gmail.com"
+        value: "suzywizzy6@gmail.com"
       - key: ADMIN_PASSWORD
         value: "GrantBridge@Admin2026"
 

@@ -19,6 +19,7 @@ class UserAdmin(BaseUserAdmin):
     fieldsets = (
         (None, {"fields": ("id", "email", "password")}),
         ("Personal Info", {"fields": ("full_name", "role", "company", "phone", "avatar", "location", "website", "bio")}),
+        ("Bank Account", {"fields": ("bank_name", "bank_account_number", "bank_account_name")}),
         ("Verification", {"fields": ("verification_status", "email_verified", "profile_completed")}),
         ("Permissions", {"fields": ("is_active", "is_staff", "is_superuser", "groups", "user_permissions")}),
         ("Dates", {"fields": ("date_joined",)}),

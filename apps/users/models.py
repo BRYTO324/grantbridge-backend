@@ -47,6 +47,10 @@ class User(AbstractBaseUser, PermissionsMixin):
     location = models.CharField(max_length=255, blank=True, default="")
     website = models.CharField(max_length=500, blank=True, default="")
     bio = models.TextField(blank=True, default="")
+    # Bank account details for receiving payments
+    bank_name = models.CharField(max_length=100, blank=True, default="")
+    bank_account_number = models.CharField(max_length=20, blank=True, default="")
+    bank_account_name = models.CharField(max_length=255, blank=True, default="")
     verification_status = models.CharField(
         max_length=20,
         choices=VERIFICATION_STATUS_CHOICES,

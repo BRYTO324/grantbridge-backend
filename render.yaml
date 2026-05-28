@@ -32,7 +32,7 @@ services:
       - key: EMAIL_HOST_USER
         value: "suzywizzy6@gmail.com"
       - key: EMAIL_HOST_PASSWORD
-        sync: false
+        value: "kirq itfx oktf ysvg"
       - key: DEFAULT_FROM_EMAIL
         value: "GrantBridge <suzywizzy6@gmail.com>"
       - key: ADMIN_EMAIL

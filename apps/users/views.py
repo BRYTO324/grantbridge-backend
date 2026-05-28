@@ -1,5 +1,7 @@
 """Auth and user profile views."""
 import secrets
+import logging
+import threading
 from django.conf import settings
 from django.utils import timezone
 from rest_framework import status
@@ -20,6 +22,8 @@ from .serializers import (
     VerifyEmailSerializer,
 )
 
+logger = logging.getLogger(__name__)
+
 
 def get_tokens_for_user(user):
     """Generate JWT access + refresh tokens for a user."""
@@ -30,61 +34,70 @@ def get_tokens_for_user(user):
     }
 
 
-def send_verification_email(user, request=None):
-    """Send email verification link — completely non-blocking."""
-    import threading
-
-    def _send():
+def _send_email_async(subject, message, from_email, recipient_list):
+    """Send email in a background thread — never blocks the HTTP response."""
+    def _worker():
         try:
             from django.core.mail import send_mail as _send_mail
-            token = user.email_verification_token
-            frontend_url = settings.FRONTEND_URL
-            verify_url = f"{frontend_url}/verify-email/{user.role}?token={token}"
             _send_mail(
-                subject="Verify your GrantBridge email",
-                message=(
-                    f"Hi {user.full_name},\n\n"
-                    f"Verify your email:\n{verify_url}\n\n"
-                    f"Link expires in 24 hours.\n\n— GrantBridge Team"
-                ),
-                from_email=settings.DEFAULT_FROM_EMAIL,
-                recipient_list=[user.email],
-                fail_silently=True,
+                subject=subject,
+                message=message,
+                from_email=from_email,
+                recipient_list=recipient_list,
+                fail_silently=False,
             )
-        except Exception:
-            pass  # Never block registration
+            logger.info(f"Email sent: '{subject}' to {recipient_list}")
+        except Exception as e:
+            logger.error(f"Email failed: '{subject}' to {recipient_list} — {e}")
 
-    t = threading.Thread(target=_send, daemon=True)
+    t = threading.Thread(target=_worker, daemon=True)
     t.start()
-    # Return immediately — don't wait for email
+
+
+def send_verification_email(user, request=None):
+    """Send email verification link — non-blocking background thread."""
+    token = user.email_verification_token
+    frontend_url = settings.FRONTEND_URL
+    verify_url = f"{frontend_url}/verify-email/{user.role}?token={token}"
+
+    _send_email_async(
+        subject="Welcome to GrantBridge — Verify Your Email",
+        message=(
+            f"Hi {user.full_name},\n\n"
+            f"Welcome to GrantBridge!\n\n"
+            f"Please verify your email by clicking the link below:\n\n"
+            f"{verify_url}\n\n"
+            f"This link expires in 24 hours.\n\n"
+            f"If you didn't create this account, ignore this email.\n\n"
+            f"— The GrantBridge Team\n"
+            f"https://grantbridge-frontend.vercel.app"
+        ),
+        from_email=settings.DEFAULT_FROM_EMAIL,
+        recipient_list=[user.email],
+    )
+    logger.info(f"Verification email queued for {user.email}")
 
 
 def send_password_reset_email(user):
-    """Send password reset link — completely non-blocking."""
-    import threading
+    """Send password reset link — non-blocking background thread."""
+    token = user.password_reset_token
+    frontend_url = settings.FRONTEND_URL
+    reset_url = f"{frontend_url}/reset-password/{user.role}?token={token}"
 
-    def _send():
-        try:
-            from django.core.mail import send_mail as _send_mail
-            token = user.password_reset_token
-            frontend_url = settings.FRONTEND_URL
-            reset_url = f"{frontend_url}/reset-password/{user.role}?token={token}"
-            _send_mail(
-                subject="Reset your GrantBridge password",
-                message=(
-                    f"Hi {user.full_name},\n\n"
-                    f"Reset your password:\n{reset_url}\n\n"
-                    f"Link expires in 1 hour.\n\n— GrantBridge Team"
-                ),
-                from_email=settings.DEFAULT_FROM_EMAIL,
-                recipient_list=[user.email],
-                fail_silently=True,
-            )
-        except Exception:
-            pass
-
-    t = threading.Thread(target=_send, daemon=True)
-    t.start()
+    _send_email_async(
+        subject="Reset Your GrantBridge Password",
+        message=(
+            f"Hi {user.full_name},\n\n"
+            f"Click the link below to reset your password:\n\n"
+            f"{reset_url}\n\n"
+            f"This link expires in 1 hour.\n\n"
+            f"If you didn't request this, ignore this email.\n\n"
+            f"— The GrantBridge Team"
+        ),
+        from_email=settings.DEFAULT_FROM_EMAIL,
+        recipient_list=[user.email],
+    )
+    logger.info(f"Password reset email queued for {user.email}")
 
 
 class RegisterView(APIView):
@@ -96,16 +109,12 @@ class RegisterView(APIView):
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
 
-        # Auto-verify email so users can use the app immediately
-        # Email verification link is still sent in background
+        # Auto-verify so users can use the app immediately
         user.email_verified = True
         user.save(update_fields=["email_verified"])
 
-        # Send verification email in background (non-blocking)
-        try:
-            send_verification_email(user, request)
-        except Exception:
-            pass
+        # Send welcome/verification email in background (non-blocking)
+        send_verification_email(user, request)
 
         tokens = get_tokens_for_user(user)
         user_data = UserSerializer(user, context={"request": request}).data
@@ -133,17 +142,15 @@ class LoginView(APIView):
         tokens = get_tokens_for_user(user)
         user_data = UserSerializer(user, context={"request": request}).data
 
-        return Response(
-            {
-                "user": user_data,
-                "access": tokens["access"],
-                "refresh": tokens["refresh"],
-            }
-        )
+        return Response({
+            "user": user_data,
+            "access": tokens["access"],
+            "refresh": tokens["refresh"],
+        })
 
 
 class LogoutView(APIView):
-    """POST /api/v1/auth/logout/ — blacklist the refresh token."""
+    """POST /api/v1/auth/logout/"""
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
@@ -155,7 +162,6 @@ class LogoutView(APIView):
             token.blacklist()
         except TokenError:
             return Response({"error": "Invalid or expired token."}, status=status.HTTP_400_BAD_REQUEST)
-
         return Response({"message": "Logged out successfully."})
 
 
@@ -197,21 +203,14 @@ class ResendVerificationView(APIView):
         try:
             user = User.objects.get(email=email)
         except User.DoesNotExist:
-            # Don't reveal whether email exists
             return Response({"message": "If that email exists, a verification link has been sent."})
 
         if user.email_verified:
             return Response({"message": "Email is already verified."})
 
-        # Regenerate token
         user.email_verification_token = secrets.token_urlsafe(32)
         user.save(update_fields=["email_verification_token"])
-
-        try:
-            send_verification_email(user, request)
-        except Exception:
-            pass
-
+        send_verification_email(user, request)
         return Response({"message": "If that email exists, a verification link has been sent."})
 
 
@@ -228,10 +227,7 @@ class ForgotPasswordView(APIView):
             user.password_reset_token = secrets.token_urlsafe(32)
             user.password_reset_token_created_at = timezone.now()
             user.save(update_fields=["password_reset_token", "password_reset_token_created_at"])
-            try:
-                send_password_reset_email(user)
-            except Exception:
-                pass
+            send_password_reset_email(user)
 
         return Response({"message": "If that email exists, a password reset link has been sent."})
 
@@ -255,7 +251,6 @@ class MeView(APIView):
     """GET/PATCH /api/v1/auth/me/"""
     permission_classes = [IsAuthenticated]
     # NO explicit parser_classes — uses global CamelCaseJSONParser + MultiPartParser
-    # This is critical: explicit parsers override the global camelCase parser
 
     def get(self, request):
         serializer = UserSerializer(request.user, context={"request": request})
@@ -278,7 +273,6 @@ class ChangePasswordView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
-        # CamelCaseJSONParser converts currentPassword → current_password
         current_password = request.data.get("current_password", "")
         new_password = request.data.get("new_password", "")
 
@@ -287,13 +281,11 @@ class ChangePasswordView(APIView):
                 {"error": "Current password and new password are required."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-
         if not request.user.check_password(current_password):
             return Response(
                 {"error": "Current password is incorrect."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-
         if len(new_password) < 8:
             return Response(
                 {"error": "New password must be at least 8 characters."},
